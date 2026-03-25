@@ -17,31 +17,28 @@ class MainActivity : ComponentActivity() {
         appContext = applicationContext
 
         setContent {
-            // Лаунчер для выбора CSV файла
+            var reloadTrigger by remember { mutableStateOf(0) }
+
             val csvLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.GetContent()
             ) { uri: Uri? ->
                 uri?.let {
-                    // Читаем файл и загружаем задачи
                     val content = loadCsvFromUri(it)
                     if (content.isNotEmpty()) {
                         TaskState.repository.deleteAll()
                         val tasks = TaskState.csvParser.parse(content)
                         TaskState.repository.insertTasks(tasks)
                         TaskState.isLoaded = true
+                        reloadTrigger++
                     }
                 }
             }
 
             App(
-                // Открываем файловый менеджер
-                onLoadCsv = {
-                    csvLauncher.launch("text/*")
-                },
-                // Открываем ссылку в браузере
+                reloadTrigger = reloadTrigger,
+                onLoadCsv = { csvLauncher.launch("text/*") },
                 onOpenLink = { url ->
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    startActivity(intent)
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 }
             )
         }
